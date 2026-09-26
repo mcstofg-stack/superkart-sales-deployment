@@ -1,24 +1,25 @@
 
+import os
 import streamlit as st
 import pandas as pd
 import requests
 
-# Base URL of the Flask backend
-BACKEND_URL = "http://backend:7860"
+# Flask backend address
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "http://backend:7860"
+)
 
-# Page configuration
 st.set_page_config(
     page_title="SuperKart Sales Prediction",
     page_icon="🛒"
 )
 
-# Page title
 st.title("🛒 SuperKart Sales Prediction")
 st.write(
     "Enter the product and store details below to predict total sales."
 )
 
-# Input fields
 Product_Weight = st.number_input(
     "Product Weight",
     min_value=0.0,
@@ -35,6 +36,28 @@ Product_Allocated_Area = st.number_input(
     min_value=0.0,
     value=0.027,
     format="%.3f"
+)
+
+Product_Type = st.selectbox(
+    "Product Type",
+    [
+        "Baking Goods",
+        "Breads",
+        "Breakfast",
+        "Canned",
+        "Dairy",
+        "Frozen Foods",
+        "Fruits and Vegetables",
+        "Hard Drinks",
+        "Health and Hygiene",
+        "Household",
+        "Meat",
+        "Others",
+        "Seafood",
+        "Snack Foods",
+        "Soft Drinks",
+        "Starchy Foods"
+    ]
 )
 
 Product_MRP = st.number_input(
@@ -74,11 +97,11 @@ Product_Type_Category = st.selectbox(
     ["Perishables", "Non Perishables"]
 )
 
-# Create the JSON payload
 product_data = {
     "Product_Weight": Product_Weight,
     "Product_Sugar_Content": Product_Sugar_Content,
     "Product_Allocated_Area": Product_Allocated_Area,
+    "Product_Type": Product_Type,
     "Product_MRP": Product_MRP,
     "Store_Size": Store_Size,
     "Store_Location_City_Type": Store_Location_City_Type,
@@ -87,9 +110,7 @@ product_data = {
     "Product_Type_Category": Product_Type_Category
 }
 
-# Single prediction
 if st.button("Predict Sales", type="primary"):
-
     try:
         response = requests.post(
             f"{BACKEND_URL}/v1/predict",
@@ -98,21 +119,21 @@ if st.button("Predict Sales", type="primary"):
         )
 
         if response.status_code == 200:
-            result = response.json()
-            predicted_sales = result["predicted_sales"]
+            predicted_sales = response.json()["predicted_sales"]
 
             st.success(
                 f"Predicted Product Store Sales Total: "
                 f"₹{predicted_sales:,.2f}"
             )
         else:
-            st.error(response.json().get("error", "Prediction failed."))
+            st.error(
+                response.json().get("error", "Prediction failed.")
+            )
 
     except requests.RequestException:
         st.error("Unable to connect to the prediction API.")
 
 
-# Batch prediction
 st.divider()
 st.subheader("Batch Prediction")
 
@@ -122,9 +143,7 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-
     if st.button("Predict Batch", type="primary"):
-
         try:
             response = requests.post(
                 f"{BACKEND_URL}/v1/predictbatch",
@@ -140,11 +159,21 @@ if uploaded_file is not None:
                     columns=["Row", "Predicted Sales"]
                 )
 
-                st.success("Batch predictions completed successfully!")
-                st.dataframe(results_df, use_container_width=True)
+                st.success(
+                    "Batch predictions completed successfully!"
+                )
+                st.dataframe(
+                    results_df,
+                    use_container_width=True
+                )
 
             else:
-                st.error(response.json().get("error", "Prediction failed."))
+                st.error(
+                    response.json().get(
+                        "error",
+                        "Prediction failed."
+                    )
+                )
 
         except requests.RequestException:
             st.error("Unable to connect to the prediction API.")
